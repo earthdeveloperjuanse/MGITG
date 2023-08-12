@@ -5,6 +5,7 @@
 import mysql.connector
 from datetime import datetime
 import matplotlib.pyplot as plt
+from matplotlib import image
 import seaborn as sns
 from pylab import *
 
@@ -55,7 +56,7 @@ def addData(sql, bd, table):
         if option_data == 1:
             x, y = input_coordinates()
             value = input_measure()
-            dateData = ("'{}'".format(datetime.now()))
+            dateData = ("'{}'".format(datetime.datetime.now()))
             try:
                 sqlinsert = 'INSERT INTO {}.{} (value, dateData, latitude, longitude) VALUES ({}, {}, {}, {})'.format(bd, table, value, dateData, x, y)
                 sql.execute(sqlinsert)
@@ -76,31 +77,43 @@ def displayData(bd, table):
 
 def get_data(bd, table):
     sql.execute('USE {}'.format(bd))
-    sql.execute('SELECT latitude, longitude, value FROM {}'.format(table))
+    sql.execute('SELECT latitude, longitude, value, dateData FROM {}'.format(table))
     data = sql.fetchall()
     return data
 
-def plot_correlations(data):
+def plot_map(data):
     latitudes = [row[0] for row in data]
     longitudes = [row[1] for row in data]
-    mediciones = [row[2] for row in data]
+    ediciones = [row[2] for row in data]
 
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    fig, ax = plt.subplots(figsize = (8, 4))
 
-    sns.scatterplot(x = latitudes, y = mediciones, ax = axs[0], alpha = 0.7, label = 'Datos')
-    sns.kdeplot(x = latitudes, y = mediciones, ax = axs[0], cmap = 'Blues', shade = True, shade_lowest = False, legend = False)
-    axs[0].set_xlabel('Latitud')
-    axs[0].set_ylabel('Medición')
-    axs[0].set_title('Densidad entre Latitud y Medición')
-    axs[0].legend()
+    map_image = image.imread(r'C:\Users\Jhernandez\Desktop\GitHub\Repositorio_Profe\AnalisisEspacial\AnalisisEspacial\AnalisisEspacial\Trabajo_Aula\MGITG\Informatica\Mapamundo.png')
+    ax.imshow(map_image, extent=[-180, 180, -90, 90], aspect='auto')
 
-    sns.scatterplot(x = longitudes, y = mediciones, ax = axs[1], alpha = 0.7, label = 'Datos')
-    sns.kdeplot(x = longitudes, y = mediciones, ax = axs[1], cmap = 'Blues', shade = True, shade_lowest = False, legend = False)
-    axs[1].set_xlabel('Longitud')
-    axs[1].set_ylabel('Medición')
-    axs[1].set_title('Densidad entre Longitud y Medición')
-    axs[1].legend()
+    # Graficar la densidad con el mapa de calor
+    kde = sns.kdeplot(x = longitudes, y = latitudes, cmap = 'Blues', shade = True, shade_lowest = False, alpha = 0.5)
+    ax.set_xlabel('Longitud')
+    ax.set_ylabel('Latitud')
+    ax.set_title('Densidad de Coordenadas con respecto a las Mediciones')
 
+    # Agregar leyenda
+    legend_labels = ['Densidad']
+    ax.legend(legend_labels)
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_time_series(data):
+    dates = [row[3] for row in data]
+    values = [row[0] for row in data]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, values, marker='o', linestyle='-', color='b')
+    plt.xlabel('Fecha')
+    plt.ylabel('Valor')
+    plt.title('Mediciones en el tiempo')
+    plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
 
@@ -131,13 +144,13 @@ def input_measure():
             print('Ingrese un valor de medición válido.')
 
 def display_menu():
-    print('INFORMÁTICA APLICADA A LA INFORMACIÓN GEOGRÁFICA \nMENÚ PRINCIPAL \n1. Mostrar bases de datos de una conexión \n2. Crear bases de datos \n3. Crear tabla \n4. Agregar datos a tabla \n5. Listar tablas de base de datos \n6. Listar registros de tabla \n7. Graficar correlación \n8. Salir')
+    print('INFORMÁTICA APLICADA A LA INFORMACIÓN GEOGRÁFICA \nMENÚ PRINCIPAL \n1. Mostrar bases de datos de una conexión \n2. Crear bases de datos \n3. Crear tabla \n4. Agregar datos a tabla \n5. Listar tablas de base de datos \n6. Listar registros de tabla \n7. Graficar mapa \n8. Graficar serie de tiempo \n9. Salir')
 
 def input_option():
     while True:
         try:
             option = int(input('Seleccione una opción: '))
-            if 1 <= option <= 8:
+            if 1 <= option <= 9:
                 return option
             else:
                 print('Opción invalida. Intente nuevamente.')
@@ -169,13 +182,18 @@ def select_option(option):
         bd = input('Nombre de la base de datos a usar: ')
         table = input('Nombre de la tabla a usar: ')
         data = get_data(bd, table)
-        plot_correlations(data)
+        plot_map(data)
+    elif option == 8:
+        bd = input('Nombre de la base de datos a usar: ')
+        table = input('Nombre de la tabla a usar: ')
+        data = get_data(bd, table)
+        plot_time_series(data)
 
 def main():
     display_menu()
     while True:
         option = input_option()
-        if option == 8:
+        if option == 9:
             print('Vuelva pronto.')
             break
         else:
